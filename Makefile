@@ -7,6 +7,8 @@ dep_cowboy_commit = 1.1.2
 
 include erlang.mk
 
+ERLC_OPTS += +'{parse_transform, lager_transform}'
+
 PROJDIR = $(realpath $(CURDIR))
 
 test:
