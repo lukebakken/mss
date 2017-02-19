@@ -6421,10 +6421,12 @@ $(RELX):
 	$(verbose) chmod +x $(RELX)
 
 relx-rel: $(RELX) rel-deps app
-	$(verbose) $(RELX) -c $(RELX_CONFIG) $(RELX_OPTS) release tar
+	# TODO LRB $(verbose) $(RELX) -c $(RELX_CONFIG) $(RELX_OPTS) release tar
+	$(verbose) $(RELX) -c $(RELX_CONFIG) $(RELX_OPTS) release
 
 relx-relup: $(RELX) rel-deps app
-	$(verbose) $(RELX) -c $(RELX_CONFIG) $(RELX_OPTS) release relup tar
+	# TODO LRB $(verbose) $(RELX) -c $(RELX_CONFIG) $(RELX_OPTS) release relup tar
+	$(verbose) $(RELX) -c $(RELX_CONFIG) $(RELX_OPTS) release relup
 
 distclean-relx-rel:
 	$(gen_verbose) rm -rf $(RELX_OUTPUT_DIR)

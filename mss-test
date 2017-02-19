@@ -3,7 +3,7 @@
 set -o errexit
 set -o nounset
 
-declare -r debug='false'
+declare -r debug="${MSS_DEBUG:-false}"
 
 if [[ $debug == 'true' ]]
 then
@@ -97,33 +97,46 @@ fi
 declare -ri id="$RANDOM"
 
 # TEST
-# PUT data
+# put-data-empty
 ccf="$(make_temp_file)"
 cout="$(make_temp_file)"
 cerr="$(make_temp_file)"
-curl -4 $cv -o "$ccf" -w '%{http_code}' -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id -d "$RANDOM"
+curl -4 $cv -o "$ccf" -w '%{http_code}' -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id 1> "$cout" 2> "$cerr"
+
+declare -i curl_rslt="$(< $cout)"
+if (( curl_rslt != 400 ))
+then
+    errexit "put-data-empty, got $curl_rslt, want 400"
+fi
+
+# TEST
+# put-data
+ccf="$(make_temp_file)"
+cout="$(make_temp_file)"
+cerr="$(make_temp_file)"
+curl -4 $cv -o "$ccf" -w '%{http_code}' -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id -d "$RANDOM" 1> "$cout" 2> "$cerr"
 
 declare -i curl_rslt="$(< $cout)"
 if (( curl_rslt != 201 ))
 then
-    errexit "got $curl_rslt, want 201"
+    errexit "put-data, got $curl_rslt, want 201"
 fi
 
 content="$(< $ccf)"
-if [[ $content != 'MSS' ]]
+if [[ $content != '' ]]
 then
-    errexit "got '$content', want MSS"
+    errexit "put-data, got '$content', want ''"
 fi
 
 # # TODO expect bad request - same data for $id
-# curl -4 $cv -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id -d "$RANDOM"
+# curl -4 $cv -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id -d "$RANDOM" 1> "$cout" 2> "$cerr"
 # 
-# curl -4 $cv -XPOST -H 'Content-Type: text/plain' localhost:7777/store/$id -d "updated-$RANDOM"
+# curl -4 $cv -XPOST -H 'Content-Type: text/plain' localhost:7777/store/$id -d "updated-$RANDOM" 1> "$cout" 2> "$cerr"
 # 
 # # TODO check data is updated-NNNN
-# curl -4 $cv -XGET -H 'Content-Type: text/plain' localhost:7777/store/$id
+# curl -4 $cv -XGET -H 'Content-Type: text/plain' localhost:7777/store/$id 1> "$cout" 2> "$cerr"
 # 
-# curl -4 $cv -XDELETE -H 'Content-Type: text/plain' localhost:7777/store/$id
+# curl -4 $cv -XDELETE -H 'Content-Type: text/plain' localhost:7777/store/$id 1> "$cout" 2> "$cerr"
 # 
 # # TODO check for 404
 # curl -4 $cv -XGET -H 'Content-Type: text/plain' localhost:7777/store/$id

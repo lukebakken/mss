@@ -19,8 +19,13 @@ terminate(_Reason, _Req, _State) ->
 
 handle_store(<<"POST">>, true, Req) ->
     {ok, _PostVals, Req2} = cowboy_req:body_qs(Req),
-    cowboy_req:reply(204, Req2);
+    cowboy_req:reply(201, Req2);
+handle_store(<<"PUT">>, true, Req) ->
+    {ok, _PostVals, Req2} = cowboy_req:body_qs(Req),
+    cowboy_req:reply(201, Req2);
 handle_store(<<"POST">>, false, Req) ->
+    cowboy_req:reply(400, [], <<"[error]: Missing body.">>, Req);
+handle_store(<<"PUT">>, false, Req) ->
     cowboy_req:reply(400, [], <<"[error]: Missing body.">>, Req);
 handle_store(_, _, Req) ->
     %% Method not allowed.
