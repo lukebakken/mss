@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+declare -r debug='false'
+
+if [[ $debug == 'true' ]]
+then
+    cv='-vvv'
+else
+    cv='-s'
+fi
+
+declare -r tmpfile_file="/tmp/mss-test.$$.tmpfiles"
+
+function make_temp_file
+{
+    local template="${1:-publish.$$.XXXXXX}"
+    if [[ $template != *XXXXXX ]]
+    then
+        template="$template.XXXXXX"
+    fi
+    local tmp=$(mktemp -t "$template")
+    echo "$tmp" >> "$tmpfile_file"
+    echo "$tmp"
+}
+
+function now
+{
+    date '+%Y-%m-%d %H:%M:%S'
+}
+
+function pwarn
+{
+    echo "$(now) [warning]: $@" 1>&2
+}
+
+function perr
+{
+    echo "$(now) [error]: $@" 1>&2
+}
+
+function pinfo
+{
+    echo "$(now) [info]: $@"
+}
+
+function pdebug
+{
+    if [[ $debug == 'true' ]]
+    then
+        echo "$(now) [debug]: $@"
+    fi
+}
+
+function errexit
+{
+    perr "$@"
+    exit 1
+}
+
+function onexit
+{
+    if [[ -f $tmpfile_file ]]
+    then
+        for tmpfile in $(< $tmpfile_file)
+        do
+            pdebug "removing temp file $tmpfile"
+            rm -f $tmpfile
+        done
+        rm -f $tmpfile_file
+    fi
+}
+
+trap onexit EXIT
+
+# TEST
+# Generic handler
+ccf="$(make_temp_file)"
+cout="$(make_temp_file)"
+cerr="$(make_temp_file)"
+curl -4 $cv -o "$ccf" -w '%{http_code}' -XGET -H 'Content-Type: text/plain' localhost:7777 1> "$cout" 2> "$cerr"
+
+declare -i curl_rslt="$(< $cout)"
+if (( curl_rslt != 200 ))
+then
+    errexit "got $curl_rslt, want 200"
+fi
+
+content="$(< $ccf)"
+if [[ $content != 'MSS' ]]
+then
+    errexit "got '$content', want MSS"
+fi
+
+declare -ri id="$RANDOM"
+
+# TEST
+# PUT data
+ccf="$(make_temp_file)"
+cout="$(make_temp_file)"
+cerr="$(make_temp_file)"
+curl -4 $cv -o "$ccf" -w '%{http_code}' -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id -d "$RANDOM"
+
+declare -i curl_rslt="$(< $cout)"
+if (( curl_rslt != 201 ))
+then
+    errexit "got $curl_rslt, want 201"
+fi
+
+content="$(< $ccf)"
+if [[ $content != 'MSS' ]]
+then
+    errexit "got '$content', want MSS"
+fi
+
+# # TODO expect bad request - same data for $id
+# curl -4 $cv -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id -d "$RANDOM"
+# 
+# curl -4 $cv -XPOST -H 'Content-Type: text/plain' localhost:7777/store/$id -d "updated-$RANDOM"
+# 
+# # TODO check data is updated-NNNN
+# curl -4 $cv -XGET -H 'Content-Type: text/plain' localhost:7777/store/$id
+# 
+# curl -4 $cv -XDELETE -H 'Content-Type: text/plain' localhost:7777/store/$id
+# 
+# # TODO check for 404
+# curl -4 $cv -XGET -H 'Content-Type: text/plain' localhost:7777/store/$id

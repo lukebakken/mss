@@ -20,6 +20,6 @@ terminate(_Reason, _Req, _State) ->
 generic_response(Req) ->
     {ok, _ReqRsp} = cowboy_req:reply(200,
         [{<<"content-type">>, <<"text/plain">>}],
-        <<"Hello From ZDSMS!">>,
+        <<"MSS">>,
         Req).
 
