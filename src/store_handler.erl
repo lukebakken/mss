@@ -1,9 +1,12 @@
 -module(store_handler).
+
 -behaviour(cowboy_http_handler).
 
--export([init/3]).
--export([handle/2]).
--export([terminate/3]).
+-include("blob.hrl").
+
+-export([init/3,
+         handle/2,
+         terminate/3]).
 
 init({tcp, http}, Req, _Opts) ->
 	{ok, Req, no_state}.
@@ -46,9 +49,8 @@ parse_binding({undefined, Req}) ->
 parse_binding({Location, Req}) when is_binary(Location) ->
     {ok, Body, Req2} = cowboy_req:body(Req),
     {ok, CT, Req3} = cowboy_req:parse_header(<<"content-type">>, Req2),
-    % TODO use opaque record
-    Object = [{body, Body}, {content_type, CT}],
-    handle_filemgr_store(filemgr:store(Object), Req3).
+    B = #blob{id=Location,content_type=CT,body=Body},
+    handle_filemgr_store(filemgr:store(B), Req3).
 
 handle_filemgr_store({error, Msg}, Req) ->
     {error, 400, Msg, Req};

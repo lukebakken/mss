@@ -1,1 +1,2 @@
 -define(SERVER, ?MODULE).
+-define(APP_NAME, mss).

@@ -1,5 +1,6 @@
 -module(mss_app).
 -behaviour(application).
+
 -include("mss.hrl").
 
 -export([start/2]).
