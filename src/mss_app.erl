@@ -19,10 +19,17 @@ handle_mss_getenv(false) ->
 handle_mss_getenv(BlobDir) ->
     handle_make_dir(file:make_dir(BlobDir), BlobDir).
 
-handle_make_dir({error, Reason}, PrivDir) ->
-    Msg = io_lib:format("could not create blob dir '~p': ~p", [PrivDir, Reason]),
+handle_make_dir({error, eexist}, BlobDir) ->
+    start_mss_app(BlobDir);
+handle_make_dir({error, Reason}, BlobDir) ->
+    Msg = io_lib:format("could not create blob dir '~p': ~p", [BlobDir, Reason]),
     {error, Msg};
-handle_make_dir(ok, _PrivDir) ->
+handle_make_dir(ok, BlobDir) ->
+    start_mss_app(BlobDir).
+
+start_mss_app(BlobDir) ->
+    application:set_env(?APP_NAME, blob_dir, BlobDir),
+    lager:debug("Using blob directory '~s'", [BlobDir]),
     start_cowboy().
 
 start_cowboy() ->

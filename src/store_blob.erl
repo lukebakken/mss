@@ -28,14 +28,14 @@ handle_blob_exists(true, Bin, Id, FileName) ->
     store_blob(put, Bin, Id, FileName).
 
 store_blob(Type, Bin, Id, FileName) ->
-    handle_write_file(file:write_file(FileName, Bin), Type, Id).
+    handle_write_file(file:write_file(FileName, Bin), Type, Id, FileName).
 
-handle_write_file({error, Reason}, _Type, Id) ->
-    Msg = io_lib:format("error|could not write blob with ID '~s': ~p", [Id, Reason]),
+handle_write_file({error, Reason}, _Type, Id, FileName) ->
+    Msg = io_lib:format("error|could not write blob with ID '~s' to file '~s': ~p", [Id, FileName, Reason]),
     {error, Msg};
-handle_write_file(ok, post, _Id) ->
+handle_write_file(ok, post, _Id, _FileName) ->
     {ok, created};
-handle_write_file(ok, put, _Id) ->
+handle_write_file(ok, put, _Id, _FileName) ->
     {ok, updated}.
 
 -spec blob_exists(string()) -> boolean().
