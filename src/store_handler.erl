@@ -49,7 +49,7 @@ parse_binding({undefined, Req}) ->
 parse_binding({Location, Req}) when is_binary(Location) ->
     {ok, Body, Req2} = cowboy_req:body(Req),
     {ok, CT, Req3} = cowboy_req:parse_header(<<"content-type">>, Req2),
-    B = #blob{id=Location,content_type=CT,body=Body},
+    B = #blob{id=Location, content_type=CT, body=Body},
     handle_filemgr_store(filemgr:store(B), Req3).
 
 handle_filemgr_store({error, Msg}, Req) ->
