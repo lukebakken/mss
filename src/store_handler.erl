@@ -20,6 +20,8 @@ handle(Req, State) ->
 terminate(_Reason, _Req, _State) ->
 	ok.
 
+handle_request(<<"DELETE">>, _, Req) ->
+    handle_parse_request(parse_request(delete, Req));
 handle_request(<<"GET">>, _, Req) ->
     handle_parse_request(parse_request(get, Req));
 handle_request(<<"POST">>, true, Req) ->
@@ -52,6 +54,8 @@ parse_request(Type, Req) ->
 
 parse_binding({undefined, Req}, _Type) ->
     {error, 400, <<"error|<location> not provided">>, Req};
+parse_binding({Location, Req}, delete) when is_binary(Location) ->
+    handle_delete(delete_blob:delete(Location), Req);
 parse_binding({Location, Req}, get) when is_binary(Location) ->
     handle_fetch(fetch_blob:fetch(Location), Req);
 parse_binding({Location, Req}, Type) when is_binary(Location) ->
@@ -59,6 +63,13 @@ parse_binding({Location, Req}, Type) when is_binary(Location) ->
     {ContentType, Req3} = cowboy_req:header(<<"content-type">>, Req2),
     Blob = #blob{id=Location, content_type=ContentType, body=Body},
     handle_store(store_blob:store(Blob, Type), Req3).
+
+handle_delete({error, notfound}, Req) ->
+    {error, 404, "", Req};
+handle_delete({error, Msg}, Req) ->
+    {error, 400, Msg, Req};
+handle_delete(ok, Req) ->
+    {ok, 204, Req}.
 
 handle_fetch({error, notfound}, Req) ->
     {error, 404, "", Req};
@@ -69,5 +80,7 @@ handle_fetch({ok, #blob{content_type=ContentType, body=Body}}, Req) ->
 
 handle_store({error, Msg}, Req) ->
     {error, 400, Msg, Req};
+handle_store({ok, updated}, Req) ->
+    {ok, 204, Req};
 handle_store({ok, created}, Req) ->
     {ok, 201, Req}.

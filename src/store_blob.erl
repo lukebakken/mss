@@ -9,44 +9,35 @@ store(#blob{id=Id}=Blob, Type) ->
     handle_get_filename(util:get_filename(Id), Blob, Type).
 
 handle_get_filename(FileName, #blob{id=Id}=Blob, post) ->
-    % post request allows for overwrite
+    % post request allows create or update
     Bin = term_to_binary(Blob),
-    store_blob(Bin, Id, FileName);
+    store_blob(post, Bin, Id, FileName);
 handle_get_filename(FileName, #blob{id=Id}=Blob, put) ->
-    % put request enforces idempotency
+    % put request allows update only
     Bin = term_to_binary(Blob),
-    handle_same_blob(is_same_blob(Bin, FileName), Bin, Id, FileName).
+    handle_blob_exists(blob_exists(FileName), Bin, Id, FileName).
 
-handle_same_blob({error, Reason}, _Bin, Id, _FileName) ->
-    Msg = io_lib:format("error|id '~s': ~p", [Id, Reason]),
+handle_blob_exists({error, Reason}, _Bin, Id, _FileName) ->
+    Msg = io_lib:format("error|ID '~s': ~p", [Id, Reason]),
     {error, Msg};
-handle_same_blob(true, _Bin, Id, FileName) ->
-    Msg = io_lib:format("error|blob with id '~s' already exists (~s)", [Id, FileName]),
+handle_blob_exists(false, _Bin, Id, _FileName) ->
+    Msg = io_lib:format("error|blob with ID '~s' does not yet exist, use POST to create.", [Id]),
     {error, Msg};
-handle_same_blob(false, Bin, Id, FileName) ->
-    store_blob(Bin, Id, FileName).
+handle_blob_exists(true, Bin, Id, FileName) ->
+    % NB we know this code path can only come from a put
+    store_blob(put, Bin, Id, FileName).
 
-store_blob(Bin, Id, FileName) ->
-    handle_write_file(file:write_file(FileName, Bin), Id).
+store_blob(Type, Bin, Id, FileName) ->
+    handle_write_file(file:write_file(FileName, Bin), Type, Id).
 
-handle_write_file({error, Reason}, Id) ->
-    Msg = io_lib:format("error|could not write blob with id '~s': ~p", [Id, Reason]),
+handle_write_file({error, Reason}, _Type, Id) ->
+    Msg = io_lib:format("error|could not write blob with ID '~s': ~p", [Id, Reason]),
     {error, Msg};
-handle_write_file(ok, _Blob) ->
-    {ok, created}.
+handle_write_file(ok, post, _Id) ->
+    {ok, created};
+handle_write_file(ok, put, _Id) ->
+    {ok, updated}.
 
--spec is_same_blob(binary(), string()) -> boolean()|{error, any()}.
-is_same_blob(Bin, FileName) ->
-    handle_is_regular_file(filelib:is_regular(FileName), Bin, FileName).
-
-handle_is_regular_file(false, _Bin, _FileName) ->
-    false;
-handle_is_regular_file(true, Bin, FileName) ->
-    handle_read_file(file:read_file(FileName), Bin).
-
-handle_read_file({error, Reason}, _Bin) ->
-    Msg = io_lib:format("error|~p", [Reason]),
-    {error, Msg};
-handle_read_file({ok, FileBlob}, Bin) ->
-    % NB returns true or false
-    erlang:md5(FileBlob) =:= erlang:md5(Bin).
+-spec blob_exists(string()) -> boolean().
+blob_exists(FileName) ->
+    filelib:is_regular(FileName).
