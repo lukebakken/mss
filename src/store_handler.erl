@@ -20,6 +20,8 @@ handle(Req, State) ->
 terminate(_Reason, _Req, _State) ->
 	ok.
 
+handle_request(<<"GET">>, _, Req) ->
+    handle_parse_request(parse_request(get, Req));
 handle_request(<<"POST">>, true, Req) ->
     handle_parse_request(parse_request(post, Req));
 handle_request(<<"PUT">>, true, Req) ->
@@ -37,6 +39,11 @@ reply_error(Code, Msg, Req) ->
 
 handle_parse_request({error, Code, Msg, Req}) ->
     reply_error(Code, Msg, Req);
+handle_parse_request({ok, Code, Body, ContentType, Req})
+  when Code =:= 200, is_binary(Body), is_binary(ContentType) ->
+    Req2 = cowboy_req:set_resp_header(<<"content-type">>, ContentType, Req),
+    Req3 = cowboy_req:set_resp_body(Body, Req2),
+    cowboy_req:reply(Code, Req3);
 handle_parse_request({ok, Code, Req}) ->
     cowboy_req:reply(Code, Req).
 
@@ -45,11 +52,20 @@ parse_request(Type, Req) ->
 
 parse_binding({undefined, Req}, _Type) ->
     {error, 400, <<"error|<location> not provided">>, Req};
+parse_binding({Location, Req}, get) when is_binary(Location) ->
+    handle_fetch(fetch_blob:fetch(Location), Req);
 parse_binding({Location, Req}, Type) when is_binary(Location) ->
     {ok, Body, Req2} = cowboy_req:body(Req),
-    {ok, CT, Req3} = cowboy_req:parse_header(<<"content-type">>, Req2),
-    B = #blob{id=Location, content_type=CT, body=Body},
-    handle_store(filemgr:store(B, Type), Req3).
+    {ContentType, Req3} = cowboy_req:header(<<"content-type">>, Req2),
+    Blob = #blob{id=Location, content_type=ContentType, body=Body},
+    handle_store(store_blob:store(Blob, Type), Req3).
+
+handle_fetch({error, notfound}, Req) ->
+    {error, 404, "", Req};
+handle_fetch({error, Msg}, Req) ->
+    {error, 400, Msg, Req};
+handle_fetch({ok, #blob{content_type=ContentType, body=Body}}, Req) ->
+    {ok, 200, Body, ContentType, Req}.
 
 handle_store({error, Msg}, Req) ->
     {error, 400, Msg, Req};

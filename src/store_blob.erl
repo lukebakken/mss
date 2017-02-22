@@ -1,4 +1,4 @@
--module(filemgr).
+-module(store_blob).
 
 -include("blob.hrl").
 -include("mss.hrl").
@@ -6,10 +6,8 @@
 -export([store/2]).
 
 store(#blob{id=Id}=Blob, Type) ->
-    handle_get_filename(get_filename(Id), Blob, Type).
+    handle_get_filename(util:get_filename(Id), Blob, Type).
 
-handle_get_filename({error, Msg}, _Blob, _Type) ->
-    {error, Msg};
 handle_get_filename(FileName, #blob{id=Id}=Blob, post) ->
     % post request allows for overwrite
     Bin = term_to_binary(Blob),
@@ -19,8 +17,9 @@ handle_get_filename(FileName, #blob{id=Id}=Blob, put) ->
     Bin = term_to_binary(Blob),
     handle_same_blob(is_same_blob(Bin, FileName), Bin, Id, FileName).
 
-handle_same_blob({error, Reason}, _Bin, _Id, _FileName) ->
-    {error, Reason};
+handle_same_blob({error, Reason}, _Bin, Id, _FileName) ->
+    Msg = io_lib:format("error|id '~s': ~p", [Id, Reason]),
+    {error, Msg};
 handle_same_blob(true, _Bin, Id, FileName) ->
     Msg = io_lib:format("error|blob with id '~s' already exists (~s)", [Id, FileName]),
     {error, Msg};
@@ -46,11 +45,8 @@ handle_is_regular_file(true, Bin, FileName) ->
     handle_read_file(file:read_file(FileName), Bin).
 
 handle_read_file({error, Reason}, _Bin) ->
-    {error, Reason};
+    Msg = io_lib:format("error|~p", [Reason]),
+    {error, Msg};
 handle_read_file({ok, FileBlob}, Bin) ->
     % NB returns true or false
     erlang:md5(FileBlob) =:= erlang:md5(Bin).
-
-get_filename(Id) ->
-    Dir = code:priv_dir(?APP_NAME),
-    filename:join(Dir, base64:encode(Id)).
