@@ -20,11 +20,10 @@ handle(Req, State) ->
 terminate(_Reason, _Req, _State) ->
 	ok.
 
-% TODO POST vs PUT
 handle_request(<<"POST">>, true, Req) ->
-    handle_parse_request(parse_request(Req));
+    handle_parse_request(parse_request(post, Req));
 handle_request(<<"PUT">>, true, Req) ->
-    handle_parse_request(parse_request(Req));
+    handle_parse_request(parse_request(put, Req));
 handle_request(<<"POST">>, false, Req) ->
     reply_error(400, <<"error|missing body">>, Req);
 handle_request(<<"PUT">>, false, Req) ->
@@ -41,18 +40,18 @@ handle_parse_request({error, Code, Msg, Req}) ->
 handle_parse_request({ok, Code, Req}) ->
     cowboy_req:reply(Code, Req).
 
-parse_request(Req) ->
-    parse_binding(cowboy_req:binding(location, Req)).
+parse_request(Type, Req) ->
+    parse_binding(cowboy_req:binding(location, Req), Type).
 
-parse_binding({undefined, Req}) ->
+parse_binding({undefined, Req}, _Type) ->
     {error, 400, <<"error|<location> not provided">>, Req};
-parse_binding({Location, Req}) when is_binary(Location) ->
+parse_binding({Location, Req}, Type) when is_binary(Location) ->
     {ok, Body, Req2} = cowboy_req:body(Req),
     {ok, CT, Req3} = cowboy_req:parse_header(<<"content-type">>, Req2),
     B = #blob{id=Location, content_type=CT, body=Body},
-    handle_filemgr_store(filemgr:store(B), Req3).
+    handle_store(filemgr:store(B, Type), Req3).
 
-handle_filemgr_store({error, Msg}, Req) ->
+handle_store({error, Msg}, Req) ->
     {error, 400, Msg, Req};
-handle_filemgr_store({ok, created}, Req) ->
+handle_store({ok, created}, Req) ->
     {ok, 201, Req}.
