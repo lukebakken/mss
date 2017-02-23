@@ -55,14 +55,14 @@ parse_request(Type, Req) ->
 parse_binding({undefined, Req}, _Type) ->
     {error, 400, <<"error|<location> not provided">>, Req};
 parse_binding({Location, Req}, delete) when is_binary(Location) ->
-    handle_delete(delete_blob:delete(Location), Req);
+    handle_delete(blob_mgr:delete(Location), Req);
 parse_binding({Location, Req}, get) when is_binary(Location) ->
-    handle_fetch(fetch_blob:fetch(Location), Req);
+    handle_fetch(blob_mgr:fetch(Location), Req);
 parse_binding({Location, Req}, Type) when is_binary(Location) ->
     {ok, Body, Req2} = cowboy_req:body(Req),
     {ContentType, Req3} = cowboy_req:header(<<"content-type">>, Req2),
     Blob = #blob{id=Location, content_type=ContentType, body=Body},
-    handle_store(store_blob:store(Blob, Type), Req3).
+    handle_store(blob_mgr:store(Blob, Type), Req3).
 
 handle_delete({error, notfound}, Req) ->
     {error, 404, "", Req};
