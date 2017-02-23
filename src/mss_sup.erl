@@ -8,7 +8,8 @@ start_link() ->
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-	Procs = [
+	ChildSpecs = [
         {blob_mgr, {blob_mgr, start_link, []}, permanent, 5, worker, [blob_mgr]}
     ],
-	{ok, {{one_for_one, 1, 5}, Procs}}.
+    SupFlags = {one_for_one, 1, 5},
+	{ok, {SupFlags, ChildSpecs}}.
