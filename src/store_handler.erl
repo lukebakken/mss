@@ -59,7 +59,8 @@ parse_binding({Location, Req}, delete) when is_binary(Location) ->
 parse_binding({Location, Req}, get) when is_binary(Location) ->
     handle_fetch(blob_mgr:fetch(Location), Req);
 parse_binding({Location, Req}, Type) when is_binary(Location) ->
-    {ok, Body, Req2} = cowboy_req:body(Req),
+    % TODO FIXME infinite limit would not be used in production
+    {ok, Body, Req2} = cowboy_req:body(Req, [{length, infinity}]),
     {ContentType, Req3} = cowboy_req:header(<<"content-type">>, Req2),
     Blob = #blob{id=Location, content_type=ContentType, body=Body},
     handle_store(blob_mgr:store(Blob, Type), Req3).

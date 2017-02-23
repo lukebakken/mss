@@ -82,7 +82,7 @@ function run_test
     local method="$3"
     local -i want_code="$4"
     local want_content="${5:-}"
-    local data="${6:-}"
+    local data_file="${6:-}"
 
     if [[ $test_id == localhost:7777* ]]
     then
@@ -102,9 +102,9 @@ function run_test
     then
         curl -4 $cv -o "$test_ccf" -w '%{http_code}' -XDELETE "$url_arg" 1> "$test_cout" 2> "$test_cerr"
     else
-        if [[ -n "$data" ]]
+        if [[ -s "$data_file" ]]
         then
-            curl -4 $cv -o "$test_ccf" -w '%{http_code}' -X$method -H 'Content-Type: text/plain' "$url_arg" -d "$data" 1> "$test_cout" 2> "$test_cerr"
+            curl -4 $cv -o "$test_ccf" -w '%{http_code}' -X$method -H 'Content-Type: text/plain' "$url_arg" -d "@$data_file" 1> "$test_cout" 2> "$test_cerr"
         else
             curl -4 $cv -o "$test_ccf" -w '%{http_code}' -X$method -H 'Content-Type: text/plain' "$url_arg" 1> "$test_cout" 2> "$test_cerr"
         fi
@@ -123,11 +123,28 @@ function run_test
     fi
 }
 
+function make_data_file
+{
+    local data_file="$(make_temp_file)"
+    openssl rand -hex -out "$data_file" 5242880
+    echo "$data_file"
+}
+
+function success_exit
+{
+    pinfo SUCCESS
+    exit 0
+}
+
 # TEST
 # generic-handler
 run_test 'generic-handler' 'localhost:7777' 'GET' 200 'MSS'
 
-declare -ri id="$RANDOM"
+declare -ri id="$(date '+%s')"
+pinfo "id: $id"
+
+data_file="$(make_data_file)"
+pinfo "data file: $(ls -l $data_file)"
 
 # TEST
 # put-data-empty
@@ -136,24 +153,26 @@ run_test 'put-data-empty' "$id" 'PUT' 400 'error|missing body'
 # TEST
 # put-data
 want_content="error|blob with ID '$id' does not yet exist, use POST to create."
-run_test 'put-data' "$id" 'PUT' 400 "$want_content" "$RANDOM"
+run_test 'put-data' "$id" 'PUT' 400 "$want_content" "$data_file"
 
 # TEST
 # post-data
-run_test 'post-data' "$id" 'POST' 201 '' "$RANDOM"
+run_test 'post-data' "$id" 'POST' 201 '' "$data_file"
 
 # TEST
 # re-post-data
 want_content="error|blob with ID '$id' exists, use PUT to update."
-run_test 're-post-data' "$id" 'POST' 400 "$want_content" "$RANDOM"
+run_test 're-post-data' "$id" 'POST' 400 "$want_content" "$data_file"
+
+data_file="$(make_data_file)"
 
 # TEST
 # put-data-update
-run_test 'put-data-update' "$id" 'PUT' 204 '' "UPDATED-$id"
+run_test 'put-data-update' "$id" 'PUT' 204 '' "$data_file"
 
 # TEST
 # get-data
-run_test 'get-data' "$id" 'GET' 200 "UPDATED-$id"
+run_test 'get-data' "$id" 'GET' 200 "$(< $data_file)"
 
 # TEST
 # delete-data
@@ -163,4 +182,4 @@ run_test 'delete-data' "$id" 'DELETE' 204 ''
 # delete-data-notfound
 run_test 'delete-data-notfound' $id 'DELETE' 404
 
-pinfo SUCCESS
+success_exit
