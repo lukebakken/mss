@@ -16,7 +16,7 @@ declare -r tmpfile_file="/tmp/mss-test.$$.tmpfiles"
 
 function make_temp_file
 {
-    local template="${1:-publish.$$.XXXXXX}"
+    local template="${1:-mss_test.$$.XXXXXX}"
     if [[ $template != *XXXXXX ]]
     then
         template="$template.XXXXXX"
@@ -75,68 +75,92 @@ function onexit
 
 trap onexit EXIT
 
+function run_test
+{
+    local test_name="$1"
+    local -r test_id="$2"
+    local method="$3"
+    local -i want_code="$4"
+    local want_content="${5:-}"
+    local data="${6:-}"
+
+    if [[ $test_id == localhost:7777* ]]
+    then
+        local url_arg="$test_id"
+    else
+        local url_arg="localhost:7777/store/$test_id"
+    fi
+
+    local test_ccf="$(make_temp_file)"
+    local test_cout="$(make_temp_file)"
+    local test_cerr="$(make_temp_file)"
+
+    if [[ $method == 'GET' ]]
+    then
+        curl -4 $cv -o "$test_ccf" -w '%{http_code}' "$url_arg" 1> "$test_cout" 2> "$test_cerr"
+    elif [[ $method == 'DELETE' ]]
+    then
+        curl -4 $cv -o "$test_ccf" -w '%{http_code}' -XDELETE "$url_arg" 1> "$test_cout" 2> "$test_cerr"
+    else
+        if [[ -n "$data" ]]
+        then
+            curl -4 $cv -o "$test_ccf" -w '%{http_code}' -X$method -H 'Content-Type: text/plain' "$url_arg" -d "$data" 1> "$test_cout" 2> "$test_cerr"
+        else
+            curl -4 $cv -o "$test_ccf" -w '%{http_code}' -X$method -H 'Content-Type: text/plain' "$url_arg" 1> "$test_cout" 2> "$test_cerr"
+        fi
+    fi
+
+    local -i test_curl_rslt="$(< $test_cout)"
+    if (( test_curl_rslt != $want_code ))
+    then
+        errexit "$test_name, got $test_curl_rslt, want $want_code"
+    fi
+
+    local test_content="$(< $test_ccf)"
+    if [[ $test_content != $want_content ]]
+    then
+        errexit "$test_name, got '$test_content', want '$want_content'"
+    fi
+}
+
 # TEST
-# Generic handler
-ccf="$(make_temp_file)"
-cout="$(make_temp_file)"
-cerr="$(make_temp_file)"
-curl -4 $cv -o "$ccf" -w '%{http_code}' -XGET -H 'Content-Type: text/plain' localhost:7777 1> "$cout" 2> "$cerr"
-
-declare -i curl_rslt="$(< $cout)"
-if (( curl_rslt != 200 ))
-then
-    errexit "got $curl_rslt, want 200"
-fi
-
-content="$(< $ccf)"
-if [[ $content != 'MSS' ]]
-then
-    errexit "got '$content', want MSS"
-fi
+# generic-handler
+run_test 'generic-handler' 'localhost:7777' 'GET' 200 'MSS'
 
 declare -ri id="$RANDOM"
 
 # TEST
 # put-data-empty
-ccf="$(make_temp_file)"
-cout="$(make_temp_file)"
-cerr="$(make_temp_file)"
-curl -4 $cv -o "$ccf" -w '%{http_code}' -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id 1> "$cout" 2> "$cerr"
-
-declare -i curl_rslt="$(< $cout)"
-if (( curl_rslt != 400 ))
-then
-    errexit "put-data-empty, got $curl_rslt, want 400"
-fi
+run_test 'put-data-empty' "$id" 'PUT' 400 'error|missing body'
 
 # TEST
 # put-data
-ccf="$(make_temp_file)"
-cout="$(make_temp_file)"
-cerr="$(make_temp_file)"
-curl -4 $cv -o "$ccf" -w '%{http_code}' -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id -d "$RANDOM" 1> "$cout" 2> "$cerr"
+want_content="error|blob with ID '$id' does not yet exist, use POST to create."
+run_test 'put-data' "$id" 'PUT' 400 "$want_content" "$RANDOM"
 
-declare -i curl_rslt="$(< $cout)"
-if (( curl_rslt != 201 ))
-then
-    errexit "put-data, got $curl_rslt, want 201"
-fi
+# TEST
+# post-data
+run_test 'post-data' "$id" 'POST' 201 '' "$RANDOM"
 
-content="$(< $ccf)"
-if [[ $content != '' ]]
-then
-    errexit "put-data, got '$content', want ''"
-fi
+# TEST
+# re-post-data
+want_content="error|blob with ID '$id' exists, use PUT to update."
+run_test 're-post-data' "$id" 'POST' 400 "$want_content" "$RANDOM"
 
-# # TODO expect bad request - same data for $id
-# curl -4 $cv -XPUT -H 'Content-Type: text/plain' localhost:7777/store/$id -d "$RANDOM" 1> "$cout" 2> "$cerr"
-# 
-# curl -4 $cv -XPOST -H 'Content-Type: text/plain' localhost:7777/store/$id -d "updated-$RANDOM" 1> "$cout" 2> "$cerr"
-# 
-# # TODO check data is updated-NNNN
-# curl -4 $cv -XGET -H 'Content-Type: text/plain' localhost:7777/store/$id 1> "$cout" 2> "$cerr"
-# 
-# curl -4 $cv -XDELETE -H 'Content-Type: text/plain' localhost:7777/store/$id 1> "$cout" 2> "$cerr"
-# 
-# # TODO check for 404
-# curl -4 $cv -XGET -H 'Content-Type: text/plain' localhost:7777/store/$id
+# TEST
+# put-data-update
+run_test 'put-data-update' "$id" 'PUT' 204 '' "UPDATED-$id"
+
+# TEST
+# get-data
+run_test 'get-data' "$id" 'GET' 200 "UPDATED-$id"
+
+# TEST
+# delete-data
+run_test 'delete-data' "$id" 'DELETE' 204 ''
+
+# TEST
+# delete-data-notfound
+run_test 'delete-data-notfound' $id 'DELETE' 404
+
+pinfo SUCCESS
