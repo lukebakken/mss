@@ -6,7 +6,7 @@
          terminate/2, code_change/3]).
 
 -export([start_link/0, stop/0,
-         store/2, fetch/1, delete/1]).
+         store/3, fetch/1, delete/1]).
 
 -spec start_link() -> {ok, pid()}.
 start_link() ->
@@ -15,8 +15,8 @@ start_link() ->
 stop() ->
     gen_server:call(?MODULE, stop).
 
-store(Blob, Type) ->
-    gen_server:call(?MODULE, {store, Blob, Type}).
+store(Blob, Bin, Type) ->
+    gen_server:call(?MODULE, {store, Blob, Bin, Type}).
 
 fetch(Id) ->
     gen_server:call(?MODULE, {fetch, Id}).
@@ -29,8 +29,8 @@ init([]) ->
     ok = lager:debug("blob_mgr init: ~p", [State]),
     {ok, State}.
 
-handle_call({store, Blob, Type}, _From, State) ->
-    Result = store_blob:store(Blob, Type),
+handle_call({store, Blob, Bin, Type}, _From, State) ->
+    Result = store_blob:store(Blob, Bin, Type),
     {reply, Result, State};
 handle_call({fetch, Id}, _From, State) ->
     Result = fetch_blob:fetch(Id),

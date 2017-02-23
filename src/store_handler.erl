@@ -62,8 +62,8 @@ parse_binding({Location, Req}, Type) when is_binary(Location) ->
     % TODO FIXME infinite limit would not be used in production
     {ok, Body, Req2} = cowboy_req:body(Req, [{length, infinity}]),
     {ContentType, Req3} = cowboy_req:header(<<"content-type">>, Req2),
-    Blob = #blob{id=Location, content_type=ContentType, body=Body},
-    handle_store(blob_mgr:store(Blob, Type), Req3).
+    Blob = #blob{id=Location, content_type=ContentType},
+    handle_store(blob_mgr:store(Blob, Body, Type), Req3).
 
 handle_delete({error, notfound}, Req) ->
     {error, 404, "", Req};
@@ -76,7 +76,7 @@ handle_fetch({error, notfound}, Req) ->
     {error, 404, "", Req};
 handle_fetch({error, Msg}, Req) ->
     {error, 400, Msg, Req};
-handle_fetch({ok, #blob{content_type=ContentType, body=Body}}, Req) ->
+handle_fetch({ok, #blob{content_type=ContentType}, Body}, Req) ->
     {ok, 200, Body, ContentType, Req}.
 
 handle_store({error, Msg}, Req) ->

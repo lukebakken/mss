@@ -4,6 +4,7 @@ set -o errexit
 set -o nounset
 
 declare -r debug="${MSS_DEBUG:-false}"
+declare -r mss_preserve="${MSS_PRESERVE:-false}"
 
 if [[ $debug == 'true' ]]
 then
@@ -173,6 +174,12 @@ run_test 'put-data-update' "$id" 'PUT' 204 '' "$data_file"
 # TEST
 # get-data
 run_test 'get-data' "$id" 'GET' 200 "$(< $data_file)"
+
+if [[ $mss_preserve == 'true' ]]
+then
+    pinfo 'preserved data files'
+    success_exit
+fi
 
 # TEST
 # delete-data
