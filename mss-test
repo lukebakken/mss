@@ -127,7 +127,7 @@ function run_test
 function make_data_file
 {
     local data_file="$(make_temp_file)"
-    openssl rand -hex -out "$data_file" 5242880
+    openssl rand -hex -out "$data_file" 524288
     echo "$data_file"
 }
 
@@ -137,15 +137,35 @@ function success_exit
     exit 0
 }
 
+function make_test_id
+{
+    local -i new_id="$(date '+%s')$RANDOM"
+    echo "$new_id"
+}
+
+function make_test_data
+{
+    local new_data_file="$(make_data_file)"
+    echo "$new_data_file"
+}
+
+function delete_data
+{
+    local -i data_id="$1"
+    # TEST
+    # delete-data
+    run_test 'delete-data' "$data_id" 'DELETE' 204 ''
+    # TEST
+    # delete-data-notfound
+    run_test 'delete-data-notfound' "$data_id" 'DELETE' 404
+}
+
 # TEST
 # generic-handler
 run_test 'generic-handler' 'localhost:7777' 'GET' 200 'MSS'
 
-declare -ri id="$(date '+%s')"
-pinfo "id: $id"
-
-data_file="$(make_data_file)"
-pinfo "data file: $(ls -l $data_file)"
+declare -i id="$(make_test_id)"
+data_file="$(make_test_data)"
 
 # TEST
 # put-data-empty
@@ -175,18 +195,56 @@ run_test 'put-data-update' "$id" 'PUT' 204 '' "$data_file"
 # get-data
 run_test 'get-data' "$id" 'GET' 200 "$(< $data_file)"
 
+delete_data "$id"
+
+declare -r id_file="$(make_temp_file)"
+
+function post_get
+{
+    local -i pg_idx="$1"
+    declare -i pg_id="$(make_test_id)"
+    local pg_data_file="$(make_test_data)"
+    local msg=''
+
+    echo "$pg_id" >> "$id_file"
+
+    run_test "post-data-$pg_idx" "$pg_id" 'POST' 201 '' "$pg_data_file"
+
+    declare -i pg_j=0
+    for (( pg_j = 0; pg_j < 32; pg_j++))
+    do
+        if (( pg_j % 2 == 0 ))
+        then
+            msg="error|blob with ID '$pg_id' exists, use PUT to update."
+            run_test "post-data-$pg_idx-$pg_j" "$pg_id" 'POST' 400 "$msg" "$pg_data_file"
+        else
+            run_test "get-data-$pg_j" "$pg_id" 'GET' 200 "$(< $pg_data_file)" &
+        fi
+    done
+
+    wait
+}
+
+declare -i i=0
+for (( i = 0; i < 4; i++))
+do
+    post_get "$i" &
+done
+
+# NB: this will only wait for the post_get child procs
+wait
+
 if [[ $mss_preserve == 'true' ]]
 then
     pinfo 'preserved data files'
     success_exit
 fi
 
-# TEST
-# delete-data
-run_test 'delete-data' "$id" 'DELETE' 204 ''
+for del_id in $(< $id_file)
+do
+    delete_data "$del_id" &
+done
 
-# TEST
-# delete-data-notfound
-run_test 'delete-data-notfound' $id 'DELETE' 404
+wait
 
 success_exit
