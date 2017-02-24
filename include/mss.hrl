@@ -1,2 +1,3 @@
 -define(SERVER, ?MODULE).
 -define(APP_NAME, mss).
+-define(DEFAULT_TIMEOUT, 60000).
