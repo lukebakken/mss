@@ -55,15 +55,15 @@ parse_request(Type, Req) ->
 parse_binding({undefined, Req}, _Type) ->
     {error, 400, <<"error|<location> not provided">>, Req};
 parse_binding({Location, Req}, delete) when is_binary(Location) ->
-    handle_delete(blob_mgr:delete(Location), Req);
+    handle_delete(blob:delete(Location), Req);
 parse_binding({Location, Req}, get) when is_binary(Location) ->
-    handle_fetch(blob_mgr:fetch(Location), Req);
+    handle_fetch(blob:fetch(Location), Req);
 parse_binding({Location, Req}, Type) when is_binary(Location) ->
     % TODO FIXME infinite limit would not be used in production
     {ok, Body, Req2} = cowboy_req:body(Req, [{length, infinity}]),
     {ContentType, Req3} = cowboy_req:header(<<"content-type">>, Req2),
     Blob = #blob{id=Location, content_type=ContentType},
-    handle_store(blob_mgr:store(Blob, Body, Type), Req3).
+    handle_store(blob:store(Blob, Body, Type), Req3).
 
 handle_delete({error, notfound}, Req) ->
     {error, 404, "", Req};
