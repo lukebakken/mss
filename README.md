@@ -34,7 +34,7 @@ make run
 make pkg
 ```
 
-The `mss.tgz` archive can be extracted and run using `challenge/bin/challenge-executable`. It will expect that `MSS_BLOB_DIR` is set to a writable directory.
+The `mss.tgz` archive can be extracted and run using `challenge/bin/challenge-executable`. It will create a directory `blobs` in the same directory as `challenge` where it writes blob data.
 
 # Design
 

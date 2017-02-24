@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ -z $MSS_BLOB_DIR ]]
-then
-    echo "[error]: please set and export the MSS_BLOB_DIR environment variable to a writable directory for blob storage." 1>&2
-    exit 1
-fi
-
-if ! touch "$MSS_BLOB_DIR/mss-verify-write"
-then
-    echo "[error]: blob directory '$MSS_BLOB_DIR' is not writable, please fix or use a different directory." 1>&2
-    exit 1
-fi
+set -o errexit
 
 # http://www.ostricher.com/2014/10/the-right-way-to-get-the-directory-of-a-bash-script/
 function get_scriptpath
@@ -35,6 +25,15 @@ function get_scriptpath
 unset CDPATH
 declare -r script_path="$(get_scriptpath)"
 
+export MSS_BLOB_DIR="$script_path/../../blobs"
+mkdir -p "$MSS_BLOB_DIR"
+
+if ! touch "$MSS_BLOB_DIR/mss-verify-write"
+then
+    echo "[error]: blob directory '$MSS_BLOB_DIR' is not writable." 1>&2
+    exit 1
+fi
+
 declare -r mss_release="$script_path/mss_release/bin/mss_release"
 
 if [[ ! -x $mss_release ]]
@@ -43,7 +42,6 @@ then
     exit 1
 fi
 
-set -o errexit
 set -o nounset
 
 declare -r arg="${1:-notset}"
