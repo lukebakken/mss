@@ -46,6 +46,17 @@ drwxrwxr-x 2 ubuntu ubuntu 4096 Feb 24 14:36 blobs/
 drwxrwxr-x 3 ubuntu ubuntu 4096 Feb 24 14:39 challenge/
 ```
 
+# Docker
+
+The base xenial docker image does *not* have `openssl` installed. Please run the following:
+
+```
+sudo apt-get update
+sudo apt-get install openssl
+```
+
+If you wish to run `mss-test`, please install `curl` as well.
+
 # Design
 
 * `mss_sup` - main supervisor for `blob_mgr_sup` and `blob_proc_svr`
