@@ -34,7 +34,17 @@ make run
 make pkg
 ```
 
-The `mss.tgz` archive can be extracted and run using `challenge/bin/challenge-executable`. It will create a directory `blobs` in the same directory as `challenge` where it writes blob data.
+The `mss.tgz` archive can be extracted and run using `challenge/bin/challenge-executable`. It will create a directory `blobs` in the same directory as `challenge` where it writes blob data, for instance:
+
+```
+ubuntu@ubuntu-xenial:~/test$ ./challenge/bin/challenge-executable
+ubuntu@ubuntu-xenial:~/test$ ll
+total 16
+drwxrwxr-x 4 ubuntu ubuntu 4096 Feb 24 14:39 ./
+drwxr-xr-x 8 ubuntu ubuntu 4096 Feb 24 14:36 ../
+drwxrwxr-x 2 ubuntu ubuntu 4096 Feb 24 14:36 blobs/
+drwxrwxr-x 3 ubuntu ubuntu 4096 Feb 24 14:39 challenge/
+```
 
 # Design
 
