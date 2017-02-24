@@ -19,5 +19,5 @@ pkg: rel
 	mkdir -p $(PROJDIR)/_pkg/challenge/bin
 	cp -f $(PROJDIR)/skel/challenge-executable $(PROJDIR)/_pkg/challenge/bin
 	chmod 755 $(PROJDIR)/_pkg/challenge/bin/challenge-executable
-	cp -af $(PROJDIR)/_rel/mss_release $(PROJDIR)/_pkg/challenge
+	cp -af $(PROJDIR)/_rel/mss_release $(PROJDIR)/_pkg/challenge/bin
 	tar -C $(PROJDIR)/_pkg -czf $(PROJDIR)/mss.tgz challenge
