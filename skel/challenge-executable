@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+if [[ -z $MSS_BLOB_DIR ]]
+then
+    echo "[error]: please set and export the MSS_BLOB_DIR environment variable to a writable directory for blob storage." 1>&2
+    exit 1
+fi
+
+if ! touch "$MSS_BLOB_DIR/mss-verify-write"
+then
+    echo "[error]: blob directory '$MSS_BLOB_DIR' is not writable, please fix or use a different directory." 1>&2
+    exit 1
+fi
+
+declare -r mss_release="$PWD/../mss_release/bin/mss_release"
+
+if [[ ! -x $mss_release ]]
+then
+    echo "[error]: expected to find executable '$mss_release' but not found." 1>&2
+    exit 1
+fi
+
+set -o errexit
+set -o nounset
+
+declare -r arg="${1:-notset}"
+
+case "$arg" in
+    start|notset)
+        $mss_release start
+        ;;
+    *)
+        $mss_release "$1"
+        ;;
+esac

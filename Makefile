@@ -13,3 +13,11 @@ PROJDIR = $(realpath $(CURDIR))
 
 test:
 	$(PROJDIR)/mss-test
+
+pkg: rel
+	rm -rf $(PROJDIR)/_pkg
+	mkdir -p $(PROJDIR)/_pkg/challenge/bin
+	cp -f $(PROJDIR)/skel/challenge-executable $(PROJDIR)/_pkg/challenge/bin
+	chmod 755 $(PROJDIR)/_pkg/challenge/bin/challenge-executable
+	cp -af $(PROJDIR)/_rel/mss_release $(PROJDIR)/_pkg/challenge
+	tar -C $(PROJDIR)/_pkg -czf $(PROJDIR)/mss.tgz challenge

@@ -11,6 +11,7 @@ erl_crash.dump
 .rebar
 tags
 *.testing
+*.tgz
 variables-ct*
 
 deps/
@@ -19,3 +20,4 @@ ebin/
 log/
 logs/
 _rel/
+_pkg/
