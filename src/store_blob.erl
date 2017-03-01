@@ -34,7 +34,6 @@ handle_blob_exists(true, put, BlobTtb, Bin, Id, FileName) ->
 store_blob(Type, BlobTtb, Bin, Id, FileName) ->
     BinFileName = util:get_bin_filename(Id),
     handle_write_bin_file(file:write_file(BinFileName, Bin), BlobTtb, Type, Id, FileName).
-    % handle_write_file(file:write_file(FileName, Bin), Type, Id, FileName).
 
 handle_write_bin_file({error, Reason}, _BlobTtb, _Type, Id, FileName) ->
     Msg = io_lib:format("error|could not write blob data with ID '~s' to file '~s': ~p", [Id, FileName, Reason]),

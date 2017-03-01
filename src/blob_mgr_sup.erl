@@ -6,14 +6,14 @@
 -export([get_mgr/1]).
 
 start_link() ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-	ChildSpecs = [
+    ChildSpecs = [
         {blob_mgr, {blob_mgr, start_link, []}, transient, 5, worker, [blob_mgr]}
     ],
     SupFlags = {simple_one_for_one, 1, 5},
-	{ok, {SupFlags, ChildSpecs}}.
+    {ok, {SupFlags, ChildSpecs}}.
 
 get_mgr(Id) ->
     maybe_start_child(blob_proc_mgr:get_pid(Id), Id).

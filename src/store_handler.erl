@@ -9,7 +9,7 @@
          terminate/3]).
 
 init({tcp, http}, Req, _Opts) ->
-	{ok, Req, no_state}.
+    {ok, Req, no_state}.
 
 handle(Req, State) ->
     {Method, Req2} = cowboy_req:method(Req),
@@ -18,7 +18,7 @@ handle(Req, State) ->
     {ok, ReqRsp, State}.
 
 terminate(_Reason, _Req, _State) ->
-	ok.
+    ok.
 
 handle_request(<<"DELETE">>, _, Req) ->
     handle_parse_request(parse_request(delete, Req));
