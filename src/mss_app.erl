@@ -35,7 +35,7 @@ start_mss_app(BlobDir) ->
 start_cowboy() ->
     Dispatch = cowboy_router:compile([
         {'_', [
-               {"/store/[:location]", store_handler, []},
+               {"/store/:location/[...]", store_handler, []},
                {"/", generic_handler, []}
         ]}
     ]),

@@ -54,11 +54,25 @@ parse_request(Type, Req) ->
 
 parse_binding({undefined, Req}, _Type) ->
     {error, 400, <<"error|<location> not provided">>, Req};
-parse_binding({Location, Req}, delete) when is_binary(Location) ->
-    handle_delete(blob:delete(Location), Req);
-parse_binding({Location, Req}, get) when is_binary(Location) ->
-    handle_fetch(blob:fetch(Location), Req);
 parse_binding({Location, Req}, Type) when is_binary(Location) ->
+    maybe_parse_path_info(cowboy_req:path_info(Req), Type, Location).
+
+maybe_parse_path_info({undefined, Req}, Type, Location) ->
+    execute_request(Type, Location, Req);
+maybe_parse_path_info({[], Req}, Type, Location) ->
+    execute_request(Type, Location, Req);
+maybe_parse_path_info({Segments, Req}, Type, Location)
+  when is_list(Segments), is_binary(Location) ->
+    % NB: must re-combine into entire Location using $/ character
+    Location1 = util:get_location([Location, Segments]),
+    execute_request(Type, Location1, Req).
+
+execute_request(delete, Location, Req) ->
+    handle_delete(blob:delete(Location), Req);
+execute_request(get, Location, Req) ->
+    handle_fetch(blob:fetch(Location), Req);
+execute_request(Type, Location, Req)
+  when Type =:= post; Type =:= put->
     % TODO FIXME infinite limit would not be used in production
     {ok, Body, Req2} = cowboy_req:body(Req, [{length, infinity}]),
     {ContentType, Req3} = cowboy_req:header(<<"content-type">>, Req2),
